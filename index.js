@@ -1,31 +1,52 @@
-import { createWalletClient, custom } from 'viem';
+import { createPublicClient, createWalletClient, custom, http, formatEther } from 'viem';
+import { foundry } from 'viem/chains';
 
 let walletClient;
+let publicClient;
 let connectedAccount;
 
-function toastWarn(text) {
-  if (typeof window.Toastify === 'function') {
-    window.Toastify({
-      text,
-      duration: 4500,
-      gravity: 'top',
-      position: 'right',
-      close: true,
-      style: {
-        background: 'linear-gradient(135deg, #334155, #0ea5b7)',
-        color: '#e5e7eb',
-        border: '1px solid rgba(34, 211, 238, 0.35)',
-      },
-    }).showToast();
+const TOAST_DURATION_MS = 3000;
+
+function showToast({ text, variant }) {
+  const toastifyFn = window.Toastify;
+  if (typeof toastifyFn !== 'function') {
+    if (variant === 'warn') console.warn(text);
+    else console.log(text);
     return;
   }
 
-  // Fallback if Toastify isn't available yet
-  console.warn(text);
+  const style =
+    variant === 'warn'
+      ? {
+          background: 'linear-gradient(135deg, #334155, #0ea5b7)',
+          color: '#e5e7eb',
+          border: '1px solid rgba(34, 211, 238, 0.35)',
+        }
+      : {
+          background: 'linear-gradient(135deg, #0b0f14, #334155)',
+          color: '#e5e7eb',
+          border: '1px solid rgba(148, 163, 184, 0.35)',
+        };
+
+  toastifyFn({
+    text,
+    duration: TOAST_DURATION_MS,
+    gravity: 'top',
+    position: 'right',
+    close: false,
+    style,
+  }).showToast();
+}
+
+function toastWarn(text) {
+  showToast({ text, variant: 'warn' });
+}
+
+function toastInfo(text) {
+  showToast({ text, variant: 'info' });
 }
 
 function getEthereumProvider() {
-  // MetaMask injects window.ethereum
   const provider = window.ethereum;
   if (!provider) {
     toastWarn(
@@ -34,6 +55,18 @@ function getEthereumProvider() {
     return null;
   }
   return provider;
+}
+
+function ensurePublicClient() {
+  if (publicClient) return publicClient;
+
+  // Anvil default JSON-RPC
+  publicClient = createPublicClient({
+    chain: foundry,
+    transport: http('http://127.0.0.1:8545'),
+  });
+
+  return publicClient;
 }
 
 async function connectWallet() {
@@ -50,15 +83,100 @@ async function connectWallet() {
   return account;
 }
 
+async function disconnectWallet() {
+  // MetaMask doesn't provide a programmatic “disconnect” for injected providers.
+  // We reset local state and UI.
+  walletClient = undefined;
+  connectedAccount = undefined;
+  setConnectUiState(false);
+}
+
+async function showConnectedBalance() {
+  if (!connectedAccount) {
+    toastWarn('Connect your wallet first.');
+    return;
+  }
+
+  const client = ensurePublicClient();
+
+  // Uses eth_getBalance under the hood
+  const balanceWei = await client.getBalance({ address: connectedAccount });
+  const balanceEth = formatEther(balanceWei);
+
+  toastInfo(`Balance for ${connectedAccount.slice(0, 6)}...${connectedAccount.slice(-4)}: ${balanceEth} ETH`);
+}
+
+function setConnectUiState(isConnected) {
+  const connectBtn = document.getElementById('connectBtn');
+  const connectStatus = document.getElementById('connectStatus');
+
+  if (connectBtn) {
+    connectBtn.textContent = isConnected ? 'Disconnect' : 'Connect';
+    connectBtn.classList.toggle('is-disconnect', Boolean(isConnected));
+  }
+
+  if (connectStatus) {
+    connectStatus.textContent = isConnected && connectedAccount
+      ? `Connected: ${connectedAccount}`
+      : '';
+  }
+}
+
+function setGetBalanceEnabled(enabled) {
+  const getBalanceBtn = document.getElementById('getBalanceBtn');
+  if (!getBalanceBtn) return;
+
+  // Keep it clickable so we can show a toast if user clicks before connecting.
+  getBalanceBtn.disabled = false;
+
+  getBalanceBtn.dataset.requiresConnection = enabled ? '0' : '1';
+  getBalanceBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+  getBalanceBtn.title = enabled ? '' : 'Connect your wallet first';
+
+  // Visual hint while still allowing clicks
+  getBalanceBtn.style.opacity = enabled ? '1' : '0.6';
+  getBalanceBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+}
+
 function wireUi() {
   const connectBtn = document.getElementById('connectBtn');
+  const getBalanceBtn = document.getElementById('getBalanceBtn');
+
+  setConnectUiState(false);
+  setGetBalanceEnabled(false);
+
   if (connectBtn) {
     connectBtn.addEventListener('click', async () => {
       try {
+        if (connectedAccount) {
+          await disconnectWallet();
+          setGetBalanceEnabled(false);
+          return;
+        }
+
         const account = await connectWallet();
-        if (account) connectBtn.textContent = `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`;
+        if (account) {
+          setConnectUiState(true);
+          setGetBalanceEnabled(true);
+        }
       } catch (err) {
         console.error(err);
+      }
+    });
+  }
+
+  if (getBalanceBtn) {
+    getBalanceBtn.addEventListener('click', async () => {
+      try {
+        if (!connectedAccount) {
+          toastWarn('Connect your wallet first.');
+          return;
+        }
+
+        await showConnectedBalance();
+      } catch (err) {
+        console.error(err);
+        toastWarn('Failed to fetch balance. Is Anvil running at http://127.0.0.1:8545?');
       }
     });
   }

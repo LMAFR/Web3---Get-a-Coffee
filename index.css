@@ -50,8 +50,23 @@ h1 {
   margin: 0.9rem 0;
 }
 
+.row-status {
+  margin-top: 0.25rem;
+}
+
 .row-actions {
   flex-wrap: wrap;
+}
+
+.connect-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.connect-status {
+  font-size: 0.95rem;
+  color: rgba(156, 163, 175, 0.95);
 }
 
 .row-input input {
@@ -85,7 +100,18 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+button.is-disconnect {
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.20), rgba(0, 0, 0, 0.75));
+  border-color: rgba(220, 38, 38, 0.75);
+  color: #ffffff;
+}
+
+button.is-disconnect:hover {
+  border-color: rgba(248, 113, 113, 0.95);
+}
+
 #connectBtn {
+  min-width: 140px;
   border-color: rgba(34, 211, 238, 0.35);
 }
 
