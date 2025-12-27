@@ -1,5 +1,14 @@
-import { createPublicClient, createWalletClient, custom, http, formatEther } from 'viem';
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+  formatEther,
+  parseEther,
+  defineChain
+} from 'viem';
 import { foundry } from 'viem/chains';
+import { contractAddress, abi } from './constants-js.js';
 
 let walletClient;
 let publicClient;
@@ -138,9 +147,88 @@ function setGetBalanceEnabled(enabled) {
   getBalanceBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
 }
 
+function getAmountEthFromInput() {
+  const amountInput = document.getElementById('amount');
+  const raw = (amountInput?.value ?? '').trim();
+
+  if (!raw) return { ok: false, reason: 'empty' };
+
+  // Basic positive numeric validation. parseEther will throw on invalid strings.
+  const asNumber = Number(raw);
+  if (!Number.isFinite(asNumber) || asNumber <= 0) return { ok: false, reason: 'nonPositive' };
+
+  try {
+    const value = parseEther(raw);
+    if (value <= 0n) return { ok: false, reason: 'nonPositive' };
+    return { ok: true, raw, value };
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
+}
+
+async function fund() {
+  if (!connectedAccount) {
+    toastWarn('Connect your wallet first.');
+    return;
+  }
+
+  const amount = getAmountEthFromInput();
+  if (!amount.ok) {
+    toastWarn('Set a valid positive amount in the input to buy a coffee.');
+    return;
+  }
+
+  try {
+    const client = ensurePublicClient();
+
+    console.log('Current chain:', await getCurrentChain(client));
+
+    // First simulate to get the correct request (gas, calldata, etc.)
+    const { request } = await client.simulateContract({
+      address: contractAddress,
+      abi,
+      chain: await getCurrentChain(client), // foundry chain ID
+      functionName: 'fund',
+      account: connectedAccount,
+      value: amount.value,
+    });
+
+    if (!walletClient) {
+      toastWarn('Wallet client not ready. Click Connect again.');
+      return;
+    }
+
+    const txHash = await walletClient.writeContract(request);
+    toastInfo(`Funding submitted: ${txHash}`);
+  } catch (err) {
+    console.error(err);
+    toastWarn('Funding failed. Check your wallet network (Anvil 127.0.0.1:8545) and try again.');
+  }
+}
+
+async function getCurrentChain(client) {
+    const chainId = await client.getChainId()
+    const currentChain = defineChain({
+        id: chainId,
+        name: "Custom Chain",
+        nativeCurrency: {
+        name: "Ether",
+        symbol: "ETH",
+        decimals: 18,
+        },
+        rpcUrls: {
+        default: {
+            http: ["http://localhost:8545"],
+        },
+        },
+    })
+    return currentChain
+}
+
 function wireUi() {
   const connectBtn = document.getElementById('connectBtn');
   const getBalanceBtn = document.getElementById('getBalanceBtn');
+  const buyCoffeeForm = document.getElementById('buyCoffeeForm');
 
   setConnectUiState(false);
   setGetBalanceEnabled(false);
@@ -178,6 +266,13 @@ function wireUi() {
         console.error(err);
         toastWarn('Failed to fetch balance. Is Anvil running at http://127.0.0.1:8545?');
       }
+    });
+  }
+
+  if (buyCoffeeForm) {
+    buyCoffeeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fund();
     });
   }
 }
