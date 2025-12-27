@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Get a Coffee</title>
+
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Get a Coffee</h1>
+
+      <section class="row row-actions" aria-label="Wallet actions">
+        <button type="button" id="connectBtn">Connect</button>
+        <button type="button" id="getBalanceBtn">Get Balance</button>
+      </section>
+
+      <form id="buyCoffeeForm" autocomplete="off">
+        <section class="row row-input" aria-label="Payment amount">
+          <label for="amount" class="sr-only">Amount (ETH)</label>
+          <input
+            id="amount"
+            name="amount"
+            type="text"
+            inputmode="decimal"
+            placeholder="Amount (e.g. 0.01 ETH)"
+          />
+        </section>
+
+        <section class="row row-submit" aria-label="Buy coffee">
+          <button type="submit" id="buyCoffeeBtn">Buy coffee</button>
+        </section>
+      </form>
+    </main>
+
+    <script src="./index.js" defer></script>
+  </body>
+</html>
