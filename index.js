@@ -171,7 +171,7 @@ async function showConnectedBalance() {
   const client = ensurePublicClient();
 
   // Uses eth_getBalance under the hood
-  const balanceWei = await client.getBalance({ address: connectedAccount });
+  const balanceWei = await client.getBalance({ address: contractAddress });
   const balanceEth = formatEther(balanceWei);
 
   toastInfo(
