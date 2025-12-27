@@ -55,6 +55,12 @@ function toastInfo(text) {
   showToast({ text, variant: 'info' });
 }
 
+function shortenHex(hex, { start = 4, end = 4 } = {}) {
+  if (!hex || typeof hex !== 'string') return '';
+  if (hex.length <= start + end) return hex;
+  return `${hex.slice(0, start)}…${hex.slice(-end)}`;
+}
+
 function getEthereumProvider() {
   const provider = window.ethereum;
   if (!provider) {
@@ -112,7 +118,9 @@ async function showConnectedBalance() {
   const balanceWei = await client.getBalance({ address: connectedAccount });
   const balanceEth = formatEther(balanceWei);
 
-  toastInfo(`Balance for ${connectedAccount.slice(0, 6)}...${connectedAccount.slice(-4)}: ${balanceEth} ETH`);
+  toastInfo(
+    `Balance for ${shortenHex(connectedAccount, { start: 4, end: 4 })}: ${balanceEth} ETH`
+  );
 }
 
 function setConnectUiState(isConnected) {
@@ -126,7 +134,7 @@ function setConnectUiState(isConnected) {
 
   if (connectStatus) {
     connectStatus.textContent = isConnected && connectedAccount
-      ? `Connected: ${connectedAccount}`
+      ? `Connected: ${shortenHex(connectedAccount, { start: 4, end: 4 })}`
       : '';
   }
 }
@@ -199,7 +207,7 @@ async function fund() {
     }
 
     const txHash = await walletClient.writeContract(request);
-    toastInfo(`Funding submitted: ${txHash}`);
+    toastInfo(`Funding submitted: ${shortenHex(txHash, { start: 4, end: 4 })}`);
   } catch (err) {
     console.error(err);
     toastWarn('Funding failed. Check your wallet network (Anvil 127.0.0.1:8545) and try again.');
