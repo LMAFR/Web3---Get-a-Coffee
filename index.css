@@ -73,6 +73,15 @@ h1 {
   width: 100%;
 }
 
+.row-submit {
+  width: 100%;
+}
+
+/* Place the balance button to the right of the submit button */
+.row-submit #getBalanceBtn {
+  margin-left: auto;
+}
+
 button {
   appearance: none;
   border: 1px solid var(--border);

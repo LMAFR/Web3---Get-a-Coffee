@@ -179,6 +179,18 @@ async function showConnectedBalance() {
   );
 }
 
+async function showBakeryBalance() {
+  try {
+    const client = ensurePublicClient();
+    const balanceWei = await client.getBalance({ address: contractAddress });
+    const balanceEth = formatEther(balanceWei);
+    toastInfo(`Bakery balance: ${balanceEth} ETH`);
+  } catch (err) {
+    console.error(err);
+    toastWarn('Failed to fetch bakery balance. Is Anvil running at http://127.0.0.1:8545?');
+  }
+}
+
 function setConnectUiState(isConnected) {
   const connectBtn = document.getElementById('connectBtn');
   const connectStatus = document.getElementById('connectStatus');
@@ -295,21 +307,27 @@ function wireUi() {
   const buyCoffeeForm = document.getElementById('buyCoffeeForm');
 
   setConnectUiState(false);
-  setGetBalanceEnabled(false);
+
+  // Get Balance is now always available
+  if (getBalanceBtn) {
+    getBalanceBtn.disabled = false;
+    getBalanceBtn.removeAttribute('aria-disabled');
+    getBalanceBtn.title = '';
+    getBalanceBtn.style.opacity = '1';
+    getBalanceBtn.style.cursor = 'pointer';
+  }
 
   if (connectBtn) {
     connectBtn.addEventListener('click', async () => {
       try {
         if (connectedAccount) {
           await disconnectWallet();
-          setGetBalanceEnabled(false);
           return;
         }
 
         const account = await connectWallet();
         if (account) {
           setConnectUiState(true);
-          setGetBalanceEnabled(true);
         }
       } catch (err) {
         console.error(err);
@@ -319,17 +337,7 @@ function wireUi() {
 
   if (getBalanceBtn) {
     getBalanceBtn.addEventListener('click', async () => {
-      try {
-        if (!connectedAccount) {
-          toastWarn('Connect your wallet first.');
-          return;
-        }
-
-        await showConnectedBalance();
-      } catch (err) {
-        console.error(err);
-        toastWarn('Failed to fetch balance. Is Anvil running at http://127.0.0.1:8545?');
-      }
+      await showBakeryBalance();
     });
   }
 
