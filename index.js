@@ -55,6 +55,62 @@ function toastInfo(text) {
   showToast({ text, variant: 'info' });
 }
 
+function toastTxSubmitted(txHash) {
+  const toastifyFn = window.Toastify;
+  if (typeof toastifyFn !== 'function') {
+    console.log('Funding submitted:', txHash);
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.gap = '0.6rem';
+
+  const text = document.createElement('span');
+  text.textContent = `Funding submitted: ${shortenHex(txHash, { start: 4, end: 4 })}`;
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.title = 'Copy transaction hash';
+  copyBtn.setAttribute('aria-label', 'Copy transaction hash');
+  copyBtn.textContent = '⧉';
+  copyBtn.style.border = '1px solid rgba(148, 163, 184, 0.35)';
+  copyBtn.style.background = 'transparent';
+  copyBtn.style.color = '#e5e7eb';
+  copyBtn.style.borderRadius = '8px';
+  copyBtn.style.padding = '0.15rem 0.45rem';
+  copyBtn.style.cursor = 'pointer';
+  copyBtn.style.lineHeight = '1.1';
+
+  copyBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(txHash);
+      toastInfo('Transaction hash copied.');
+    } catch (err) {
+      console.error(err);
+      toastWarn('Could not copy transaction hash.');
+    }
+  });
+
+  wrapper.appendChild(text);
+  wrapper.appendChild(copyBtn);
+
+  toastifyFn({
+    node: wrapper,
+    duration: TOAST_DURATION_MS,
+    gravity: 'top',
+    position: 'right',
+    close: false,
+    style: {
+      background: 'linear-gradient(135deg, #0b0f14, #334155)',
+      color: '#e5e7eb',
+      border: '1px solid rgba(148, 163, 184, 0.35)',
+    },
+  }).showToast();
+}
+
 function shortenHex(hex, { start = 4, end = 4 } = {}) {
   if (!hex || typeof hex !== 'string') return '';
   if (hex.length <= start + end) return hex;
@@ -207,7 +263,7 @@ async function fund() {
     }
 
     const txHash = await walletClient.writeContract(request);
-    toastInfo(`Funding submitted: ${shortenHex(txHash, { start: 4, end: 4 })}`);
+    toastTxSubmitted(txHash);
   } catch (err) {
     console.error(err);
     toastWarn('Funding failed. Check your wallet network (Anvil 127.0.0.1:8545) and try again.');
