@@ -391,7 +391,7 @@ import {
   
     if (getBalanceBtn) {
       getBalanceBtn.addEventListener('click', async () => {
-        await getBalanceCopied();
+        await showBakeryBalance();
       });
     }
   
